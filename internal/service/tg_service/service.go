@@ -60,12 +60,12 @@ type (
 func New(conf config.Config, as *as.AppService, l *zap.Logger) (*TgService, error) {
 	s := &TgService{
 		// HostUrl:    conf.MY_URL,
-		MyPort:     conf.PORT,
-		TgEndp:     conf.TG_ENDPOINT,
-		Token:      conf.TOKEN,
-		As:         as,
-		l:          l,
-		MediaCh:    make(chan Media, 10),
+		MyPort:  conf.PORT,
+		TgEndp:  conf.TG_ENDPOINT,
+		Token:   conf.TOKEN,
+		As:      as,
+		l:       l,
+		MediaCh: make(chan Media, 10),
 		MediaStore: MediaStore{
 			MediaGroups: make(map[string][]Media),
 		},
@@ -86,7 +86,7 @@ func New(conf config.Config, as *as.AppService, l *zap.Logger) (*TgService, erro
 	go func() {
 		mskLoc, _ := time.LoadLocation("Europe/Moscow")
 		cron := gocron.NewScheduler(mskLoc)
-		cron.Every(1).Day().At("02:30").Do(func(){
+		cron.Every(1).Day().At("02:30").Do(func() {
 			err := files.RemoveContentsFromDir("files")
 			if err != nil {
 				s.l.Error(fmt.Sprintf("files.RemoveContentsFromDir('files') err: %v", err))
@@ -99,9 +99,9 @@ func New(conf config.Config, as *as.AppService, l *zap.Logger) (*TgService, erro
 	// получение tg updates Donor
 	go func() {
 		updConf := UpdateConfig{
-			Offset: 0,
+			Offset:  0,
 			Timeout: 30,
-			Buffer: 1000,
+			Buffer:  1000,
 		}
 		updates, _ := s.GetUpdatesChan(&updConf, s.Token)
 		for update := range updates {
@@ -183,7 +183,7 @@ func New(conf config.Config, as *as.AppService, l *zap.Logger) (*TgService, erro
 						arrsik = append(arrsik, nwmd)
 					}
 				}
-		
+
 				DonorBot, err := s.As.GetBotInfoByToken(s.Token)
 				if err != nil {
 					s.l.Error("Channel: s.As.GetBotInfoByToken(s.Token)", zap.Error(err))
@@ -210,8 +210,8 @@ func New(conf config.Config, as *as.AppService, l *zap.Logger) (*TgService, erro
 				}
 
 				acceptMess = map[string]any{
-					"chat_id": strconv.Itoa(DonorBot.ChId),
-					"text":    "подтвердите сообщение сверху",
+					"chat_id":      strconv.Itoa(DonorBot.ChId),
+					"text":         "подтвердите сообщение сверху",
 					"reply_markup": `{ "inline_keyboard" : [[{ "text": "разослать по каналам", "callback_data": "accept_ch_post_by_admin" }]] }`,
 				}
 				MediaJson, err = json.Marshal(acceptMess)
@@ -249,7 +249,7 @@ func (ts *TgService) GetUpdatesChan(conf *UpdateConfig, token string) (chan mode
 					time.Sleep(time.Second * 3)
 					continue
 				}
-	
+
 				for _, update := range updates {
 					if update.UpdateId >= conf.Offset {
 						conf.Offset = update.UpdateId + 1
@@ -279,7 +279,7 @@ func (ts *TgService) GetUpdates(conf *UpdateConfig, token string) ([]models.Upda
 		bytes.NewBuffer(json_data),
 	)
 	if err != nil {
-		return  []models.Update{}, err
+		return []models.Update{}, err
 	}
 	defer resp.Body.Close()
 
@@ -296,6 +296,14 @@ func (srv *TgService) Donor_Update_v2(m models.Update) error {
 		err := srv.Donor_HandleChannelPost(m)
 		if err != nil {
 			srv.l.Error("donor_Update: Donor_HandleChannelPost(m)", zap.Error(err))
+		}
+		return nil
+	}
+
+	if m.EditedChannelPost != nil { // on Edit_channel_post
+		err := srv.Donor_HandleEditEditedChannelPost(m)
+		if err != nil {
+			srv.l.Error("donor_Update: Donor_EditChannelPost(m)", zap.Error(err))
 		}
 		return nil
 	}
@@ -326,10 +334,8 @@ func (srv *TgService) Donor_Update_v2(m models.Update) error {
 		return nil
 	}
 
-
 	return nil
 }
-
 
 func MediaInSlice(s []models.InputMedia, m models.InputMedia) bool {
 	for _, v := range s {

@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  grabber-app:
+    container_name: grabber-app
+    build: ./
+    restart: unless-stopped
+    ports:
+      - 4000:4000
+    volumes:
+      - ./volumes/logs:/app/logs
+      - ./volumes/files:/app/files
+    networks:
+      - mynet
+
+  grab_db:
+    container_name: grab_db
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: grabber
+    networks:
+      - mynet
+    volumes:
+      - ./volumes/db/data:/var/lib/postgresql/data
+
+networks:
+  mynet:
+    driver: bridge
